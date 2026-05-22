@@ -1,0 +1,26 @@
+name = "hisobkit-api"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ─── Non-sensitive vars ───────────────────────────────────────────────────────
+[vars]
+NODE_ENV       = "production"
+JWT_EXPIRES_IN = "7d"
+PORT           = "3000"
+FRONTEND_URL   = "https://hisobkit.pages.dev"
+
+# ─── Secrets (run once per environment) ───────────────────────────────────────
+# wrangler secret put DATABASE_URL
+# wrangler secret put DIRECT_URL
+# wrangler secret put JWT_SECRET
+# wrangler secret put GOOGLE_CLIENT_ID
+# wrangler secret put TELEGRAM_BOT_TOKEN
+
+# ─── Local dev overrides ──────────────────────────────────────────────────────
+[dev]
+port = 3000
+
+# ─── Build (esbuild via Wrangler — no extra config needed for Hono) ───────────
+[build]
+command = ""

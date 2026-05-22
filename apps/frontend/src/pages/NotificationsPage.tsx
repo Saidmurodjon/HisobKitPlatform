@@ -1,7 +1,6 @@
 import { Bell, CheckCheck, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button.js";
-import { Badge } from "@/components/ui/badge.js";
 import {
   useGetNotificationsQuery,
   useMarkNotificationReadMutation,
@@ -106,9 +105,10 @@ export function NotificationsPage() {
               {!notification.isRead && (
                 <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5" />
               )}
-              {notification.metaData?.groupId && (
-                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-              )}
+              {notification.metaData != null &&
+                (notification.metaData as Record<string, unknown>)["groupId"] != null && (
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                )}
             </button>
           ))}
         </div>

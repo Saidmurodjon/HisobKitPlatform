@@ -278,7 +278,7 @@ export function GroupLedger({ groupId, currentUserId }: GroupLedgerProps) {
       )}
 
       {activeTab === "balances" && (
-        <BalanceSummary groupId={groupId} currentUserId={currentUserId} />
+        <BalanceSummary groupId={groupId} />
       )}
 
       {activeTab === "analytics" && <AnalyticsPanel groupId={groupId} />}

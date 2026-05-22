@@ -7,10 +7,14 @@
     "dev": "bun run --hot src/index.ts",
     "build": "bun build src/index.ts --outdir dist --target bun",
     "start": "bun dist/index.js",
+    "deploy": "wrangler deploy",
+    "deploy:secrets": "bash scripts/set-secrets.sh",
+    "cf:dev": "wrangler dev",
     "db:generate": "bunx prisma generate",
     "db:push": "bunx prisma db push",
     "db:migrate": "bunx prisma migrate dev",
-    "db:studio": "bunx prisma studio"
+    "db:studio": "bunx prisma studio",
+    "db:schema": "bunx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script | bun run scripts/apply-schema.ts /dev/stdin"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.4.1",
@@ -22,8 +26,10 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250522.0",
     "@types/bun": "latest",
     "prisma": "^5.16.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "wrangler": "^3.114.0"
   }
 }

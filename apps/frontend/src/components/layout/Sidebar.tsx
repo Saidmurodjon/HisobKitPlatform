@@ -1,7 +1,7 @@
 import { Home, Plus, Users, Settings } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.js";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar.js";
 import { Button } from "@/components/ui/button.js";
 import { useGetGroupsQuery, useCreateGroupMutation } from "@/store/api/groupsApi.js";
 import { getInitials, GROUP_TYPE_LABELS } from "@/lib/utils.js";

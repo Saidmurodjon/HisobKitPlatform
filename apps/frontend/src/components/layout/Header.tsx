@@ -1,9 +1,7 @@
 import { Bell, LogOut, Menu, X } from "lucide-react";
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.js";
 import { Button } from "@/components/ui/button.js";
-import { Badge } from "@/components/ui/badge.js";
 import { useAuth } from "@/hooks/useAuth.js";
 import { useGetUnreadCountQuery } from "@/store/api/notificationsApi.js";
 import { getInitials } from "@/lib/utils.js";

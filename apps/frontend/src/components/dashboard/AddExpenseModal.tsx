@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Minus, SplitSquareHorizontal, Equal, DollarSign } from "lucide-react";
+import { Plus, SplitSquareHorizontal, Equal, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,

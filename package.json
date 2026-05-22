@@ -8,8 +8,12 @@
     "dev:frontend": "bun run --cwd apps/frontend dev",
     "build:backend": "bun run --cwd apps/backend build",
     "build:frontend": "bun run --cwd apps/frontend build",
+    "deploy:api": "bun run --cwd apps/backend deploy",
+    "deploy:web": "bun run --cwd apps/frontend deploy",
+    "deploy:secrets": "bun run --cwd apps/backend deploy:secrets",
     "db:generate": "bun run --cwd apps/backend db:generate",
     "db:push": "bun run --cwd apps/backend db:push",
-    "db:migrate": "bun run --cwd apps/backend db:migrate"
+    "db:migrate": "bun run --cwd apps/backend db:migrate",
+    "db:schema": "bun run --cwd apps/backend db:schema"
   }
 }

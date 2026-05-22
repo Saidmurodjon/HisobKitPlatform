@@ -3,16 +3,15 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { Pool, neonConfig } from "@neondatabase/serverless";
 import { env } from "../config/env.js";
 
-// Use the native Bun WebSocket so Prisma + Neon work entirely over WSS (port 443).
-// This eliminates any dependency on TCP port 5432 in the runtime.
-neonConfig.webSocketConstructor = WebSocket;
+// Force HTTP mode: queries go over HTTPS (port 443) via fetch().
+// Works in Cloudflare Workers, Bun, Node — no TCP port 5432 ever needed.
+neonConfig.poolQueryViaFetch = true;
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 function makePrismaClient(): PrismaClient {
   const pool = new Pool({ connectionString: env.DATABASE_URL });
   const adapter = new PrismaNeon(pool);
-
   return new PrismaClient({
     adapter,
     log: env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],

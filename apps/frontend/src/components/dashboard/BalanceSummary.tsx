@@ -9,10 +9,9 @@ import { cn } from "@/lib/utils.js";
 
 interface BalanceSummaryProps {
   groupId: string;
-  currentUserId: string;
 }
 
-export function BalanceSummary({ groupId, currentUserId }: BalanceSummaryProps) {
+export function BalanceSummary({ groupId }: BalanceSummaryProps) {
   const { data, isLoading } = useGetGroupBalanceSummaryQuery(groupId);
   const [markPaid, { isLoading: isPaying }] = useMarkSettlementPaidMutation();
 

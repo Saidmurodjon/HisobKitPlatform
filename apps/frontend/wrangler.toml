@@ -1,0 +1,19 @@
+name                  = "hisobkit"
+pages_build_output_dir = "dist"
+compatibility_date    = "2025-01-01"
+
+# ─── Build ────────────────────────────────────────────────────────────────────
+[build]
+command = "bun run build"
+
+# ─── Pages environment variables ──────────────────────────────────────────────
+# Set these in the Cloudflare Pages dashboard or via:
+#   wrangler pages secret put VITE_GOOGLE_CLIENT_ID
+#
+# Required:
+#   VITE_GOOGLE_CLIENT_ID   — Google OAuth client ID
+#   API_WORKER_URL          — Full URL of the deployed Workers backend
+#                             e.g. https://hisobkit-api.<account>.workers.dev
+
+[env.production.vars]
+NODE_VERSION = "20"

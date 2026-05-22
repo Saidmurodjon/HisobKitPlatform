@@ -1,13 +1,11 @@
-import { Plus, Users2, TrendingUp, Wallet } from "lucide-react";
+import { Users2, TrendingUp, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card.js";
-import { Button } from "@/components/ui/button.js";
+import { Card, CardContent } from "@/components/ui/card.js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar.js";
 import { Badge } from "@/components/ui/badge.js";
 import { useGetGroupsQuery } from "@/store/api/groupsApi.js";
 import { useAuth } from "@/hooks/useAuth.js";
 import { formatRelativeTime, getInitials, GROUP_TYPE_LABELS } from "@/lib/utils.js";
-import { cn } from "@/lib/utils.js";
 
 export function DashboardPage() {
   const { user } = useAuth();

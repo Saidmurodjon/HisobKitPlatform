@@ -19,7 +19,15 @@ app.use("*", secureHeaders());
 app.use(
   "*",
   cors({
-    origin: [env.FRONTEND_URL],
+    // Accept requests from the Pages domain and the local dev server.
+    origin: (origin) => {
+      const allowed = [
+        env.FRONTEND_URL,
+        "http://localhost:5173",
+        "http://localhost:4173",
+      ];
+      return allowed.includes(origin) ? origin : allowed[0]!;
+    },
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
@@ -47,14 +55,14 @@ app.route("/api/notifications", notificationsRouter);
 app.onError(errorHandler);
 app.notFound(notFoundHandler);
 
-// ─── Server Bootstrap ─────────────────────────────────────────────────────────
-
-const server = Bun.serve({
-  fetch: app.fetch,
-  port: env.PORT,
-});
-
-console.log(`🚀 HisobKit API running on http://localhost:${server.port}`);
-console.log(`📦 Environment: ${env.NODE_ENV}`);
+// ─── Runtime Bootstrap ────────────────────────────────────────────────────────
+// `export default app` is the Cloudflare Workers fetch handler.
+// When running under Bun (local dev) we also start the HTTP server.
 
 export default app;
+
+if (typeof Bun !== "undefined") {
+  const server = Bun.serve({ fetch: app.fetch, port: env.PORT });
+  console.log(`🚀 HisobKit API  →  http://localhost:${server.port}`);
+  console.log(`📦 Environment   →  ${env.NODE_ENV}`);
+}
