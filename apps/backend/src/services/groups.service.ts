@@ -10,7 +10,7 @@ export async function createGroup(
     const group = await tx.group.create({
       data: {
         name: data.name,
-        description: data.description,
+        description: data.description ?? null,
         type: data.type ?? "OTHER",
         createdById,
       },

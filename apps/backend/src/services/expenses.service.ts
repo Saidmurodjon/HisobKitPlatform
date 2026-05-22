@@ -66,6 +66,11 @@ export async function createExpense(
 
   // Payer's own split does not generate a debt — but we still record it for
   // accurate "who participated" bookkeeping and receipt breakdown.
+  const payer = await prisma.user.findUniqueOrThrow({
+    where: { id: input.paidByUserId },
+    select: { name: true },
+  });
+
   const expense = await prisma.$transaction(async (tx) => {
     const created = await tx.expense.create({
       data: {
@@ -76,21 +81,17 @@ export async function createExpense(
         category: input.category ?? "OTHER",
         splitType,
         status: "PENDING",
-        notes: input.notes,
+        notes: input.notes ?? null,
         splits: {
           create: finalSplits.map((s) => ({
             oweUserId: s.userId,
             amount: s.amount,
-            // Payer's own portion is auto-confirmed; no notification needed.
             isConfirmed: s.userId === input.paidByUserId,
             confirmedAt: s.userId === input.paidByUserId ? new Date() : null,
           })),
         },
       },
-      include: {
-        splits: true,
-        paidBy: { select: { id: true, name: true, avatar: true } },
-      },
+      include: { splits: true },
     });
 
     // Create in-app notifications for all non-payer participants.
@@ -98,17 +99,19 @@ export async function createExpense(
       .map((s) => s.userId)
       .filter((uid) => uid !== input.paidByUserId);
 
-    await tx.notification.createMany({
-      data: notifiees.map((uid) => ({
-        userId: uid,
-        type: "EXPENSE_ADDED" as const,
-        title: "New expense to confirm",
-        message: `${created.paidBy.name} added "${input.description}" — you owe ${
-          finalSplits.find((s) => s.userId === uid)?.amount?.toFixed(2) ?? "0.00"
-        }`,
-        metaData: { expenseId: created.id, groupId: input.groupId },
-      })),
-    });
+    if (notifiees.length > 0) {
+      await tx.notification.createMany({
+        data: notifiees.map((uid) => ({
+          userId: uid,
+          type: "EXPENSE_ADDED" as const,
+          title: "New expense to confirm",
+          message: `${payer.name} added "${input.description}" — you owe ${
+            finalSplits.find((s) => s.userId === uid)?.amount?.toFixed(2) ?? "0.00"
+          }`,
+          metaData: { expenseId: created.id, groupId: input.groupId },
+        })),
+      });
+    }
 
     return created;
   });

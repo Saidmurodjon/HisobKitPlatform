@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma.js";
 import { HTTPException } from "hono/http-exception";
-import type { NotificationType } from "@prisma/client";
+import type { NotificationType, Prisma } from "@prisma/client";
 
 interface CreateNotificationInput {
   userId: string;
@@ -17,7 +17,7 @@ export async function createNotification(input: CreateNotificationInput) {
       type: input.type,
       title: input.title,
       message: input.message,
-      metaData: input.metaData ?? {},
+      metaData: (input.metaData ?? {}) as Prisma.InputJsonValue,
     },
   });
 }

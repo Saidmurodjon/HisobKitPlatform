@@ -1,0 +1,160 @@
+name: Deploy HisobKit
+
+on:
+  push:
+    branches: [main, claude/compassionate-galileo-ocfYq]
+  workflow_dispatch:
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+jobs:
+  # ─── 1. Push Prisma schema to Neon ──────────────────────────────────────────
+  migrate-db:
+    name: DB Schema Push
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Push schema
+        run: bunx prisma db push --skip-generate --accept-data-loss
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+  # ─── 2. Deploy backend to Cloudflare Workers ────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend → CF Workers
+    needs: migrate-db
+    runs-on: ubuntu-latest
+    outputs:
+      worker_url: ${{ steps.deploy.outputs.worker_url }}
+    defaults:
+      run:
+        working-directory: apps/backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+
+      - name: Deploy Workers
+        id: deploy
+        run: |
+          OUTPUT=$(bunx wrangler deploy --json 2>&1 || bunx wrangler deploy 2>&1)
+          echo "$OUTPUT"
+          # Extract URL from JSON output (wrangler --json)
+          URL=$(echo "$OUTPUT" | python3 -c "
+          import sys, json
+          for line in sys.stdin:
+              line = line.strip()
+              if line.startswith('{'):
+                  try:
+                      d = json.loads(line)
+                      url = d.get('url') or (d.get('urls') or [None])[0]
+                      if url:
+                          print(url); break
+                  except: pass
+          " 2>/dev/null)
+          # Fallback: derive URL from account subdomain
+          if [ -z "$URL" ]; then
+            URL="https://hisobkit-api.${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.workers.dev"
+          fi
+          echo "worker_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed to: $URL"
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+      - name: Push Worker secrets
+        run: |
+          echo "${{ secrets.DATABASE_URL }}" | bunx wrangler secret put DATABASE_URL
+          echo "${{ secrets.DIRECT_URL }}" | bunx wrangler secret put DIRECT_URL
+          echo "${{ secrets.JWT_SECRET }}" | bunx wrangler secret put JWT_SECRET
+          echo "${{ secrets.GOOGLE_CLIENT_ID }}" | bunx wrangler secret put GOOGLE_CLIENT_ID
+          echo "${{ secrets.TELEGRAM_BOT_TOKEN }}" | bunx wrangler secret put TELEGRAM_BOT_TOKEN
+
+  # ─── 3. Set Pages env var (API_WORKER_URL) via CF API ───────────────────────
+  set-pages-env:
+    name: Configure CF Pages Env
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set API_WORKER_URL on Pages project
+        env:
+          WORKER_URL: ${{ needs.deploy-backend.outputs.worker_url }}
+        run: |
+          echo "Setting API_WORKER_URL = $WORKER_URL"
+          curl -s -X PATCH \
+            "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/pages/projects/hisobkit" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"deployment_configs\": {
+                \"production\": {
+                  \"env_vars\": {
+                    \"API_WORKER_URL\": {\"value\": \"$WORKER_URL\", \"type\": \"plain_text\"},
+                    \"NODE_VERSION\": {\"value\": \"20\", \"type\": \"plain_text\"}
+                  }
+                }
+              }
+            }" | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d.get('success') else d)"
+
+  # ─── 4. Build & deploy frontend to CF Pages ─────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend → CF Pages
+    needs: set-pages-env
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+
+      - name: Deploy to CF Pages
+        run: |
+          bunx wrangler pages deploy dist \
+            --project-name=hisobkit \
+            --commit-dirty=true

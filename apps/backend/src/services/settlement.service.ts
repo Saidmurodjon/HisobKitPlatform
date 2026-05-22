@@ -11,15 +11,12 @@ import { createNotification } from "./notification.service.js";
 export async function recalculateGroupSettlements(groupId: string): Promise<void> {
   const expenses = await prisma.expense.findMany({
     where: { groupId, status: "ACTIVE" },
-    include: {
+    select: {
+      paidByUserId: true,
       splits: {
         where: { isConfirmed: true },
         select: { oweUserId: true, amount: true },
       },
-    },
-    select: {
-      paidByUserId: true,
-      splits: true,
     },
   });
 

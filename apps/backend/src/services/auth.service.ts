@@ -129,8 +129,8 @@ async function verifyGoogleIdToken(idToken: string): Promise<GoogleTokenPayload>
     sub: String(payload["sub"]),
     email: String(payload["email"]),
     name: String(payload["name"]),
-    picture: payload["picture"] ? String(payload["picture"]) : undefined,
     email_verified: payload["email_verified"] === "true" || payload["email_verified"] === true,
+    ...(payload["picture"] ? { picture: String(payload["picture"]) } : {}),
   };
 }
 
