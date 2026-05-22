@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum AuthProvider {
+  GOOGLE
+  TELEGRAM
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum GroupType {
+  FLATMATES
+  COWORKERS
+  FRIENDS
+  TRIP
+  FAMILY
+  OTHER
+}
+
+enum GroupMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ExpenseStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+enum ExpenseCategory {
+  FOOD
+  RENT
+  UTILITIES
+  ENTERTAINMENT
+  TRANSPORT
+  HEALTHCARE
+  SHOPPING
+  TRAVEL
+  OTHER
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+}
+
+enum SettlementStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  EXPENSE_ADDED
+  EXPENSE_CONFIRMED
+  EXPENSE_REJECTED
+  SETTLEMENT_REQUEST
+  SETTLEMENT_COMPLETED
+  GROUP_INVITE
+  SYSTEM
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String       @id @default(cuid())
+  email        String?      @unique
+  telegramId   String?      @unique
+  name         String
+  avatar       String?
+  authProvider AuthProvider
+  role         Role         @default(USER)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  groupMemberships GroupMember[]
+  paidExpenses     Expense[]          @relation("ExpensePaidBy")
+  expenseSplits    ExpenseSplit[]     @relation("ExpenseSplitOwer")
+  settlementsFrom  Settlement[]       @relation("SettlementFrom")
+  settlementsTo    Settlement[]       @relation("SettlementTo")
+  notifications    Notification[]
+  createdGroups    Group[]            @relation("GroupCreatedBy")
+
+  @@index([email])
+  @@index([telegramId])
+  @@map("users")
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  type        GroupType @default(OTHER)
+  inviteCode  String    @unique @default(cuid())
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  createdBy   User          @relation("GroupCreatedBy", fields: [createdById], references: [id])
+  members     GroupMember[]
+  expenses    Expense[]
+  settlements Settlement[]
+
+  @@index([createdById])
+  @@index([inviteCode])
+  @@map("groups")
+}
+
+model GroupMember {
+  id       String          @id @default(cuid())
+  groupId  String
+  userId   String
+  role     GroupMemberRole @default(MEMBER)
+  joinedAt DateTime        @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  groupId       String
+  paidByUserId  String
+  totalAmount   Decimal         @db.Decimal(15, 2)
+  description   String
+  category      ExpenseCategory @default(OTHER)
+  splitType     SplitType       @default(EQUAL)
+  status        ExpenseStatus   @default(PENDING)
+  receiptUrl    String?
+  notes         String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  group    Group          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy   User           @relation("ExpensePaidBy", fields: [paidByUserId], references: [id])
+  splits   ExpenseSplit[]
+
+  @@index([groupId])
+  @@index([paidByUserId])
+  @@index([groupId, status])
+  @@index([groupId, createdAt])
+  @@map("expenses")
+}
+
+model ExpenseSplit {
+  id          String   @id @default(cuid())
+  expenseId   String
+  oweUserId   String
+  amount      Decimal  @db.Decimal(15, 2)
+  isConfirmed Boolean  @default(false)
+  confirmedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  ower    User    @relation("ExpenseSplitOwer", fields: [oweUserId], references: [id])
+
+  @@unique([expenseId, oweUserId])
+  @@index([expenseId])
+  @@index([oweUserId])
+  @@map("expense_splits")
+}
+
+model Settlement {
+  id         String           @id @default(cuid())
+  groupId    String
+  fromUserId String
+  toUserId   String
+  amount     Decimal          @db.Decimal(15, 2)
+  isPaid     Boolean          @default(false)
+  status     SettlementStatus @default(PENDING)
+  paidAt     DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  group    Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fromUser User  @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  toUser   User  @relation("SettlementTo", fields: [toUserId], references: [id])
+
+  @@index([groupId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([groupId, status])
+  @@map("settlements")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  metaData  Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}

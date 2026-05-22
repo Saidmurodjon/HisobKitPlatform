@@ -1,0 +1,15 @@
+{
+  "name": "hisobkit-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:backend": "bun run --cwd apps/backend dev",
+    "dev:frontend": "bun run --cwd apps/frontend dev",
+    "build:backend": "bun run --cwd apps/backend build",
+    "build:frontend": "bun run --cwd apps/frontend build",
+    "db:generate": "bun run --cwd apps/backend db:generate",
+    "db:push": "bun run --cwd apps/backend db:push",
+    "db:migrate": "bun run --cwd apps/backend db:migrate"
+  }
+}
